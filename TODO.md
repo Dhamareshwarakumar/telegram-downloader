@@ -1,0 +1,1 @@
+- Configure [Prettier pre-commit hook](https://prettier.io/docs/precommit) to format code before commit
