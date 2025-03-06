@@ -7,7 +7,7 @@ class ApiException extends Error {
         this.name = this.constructor.name;
         Error.captureStackTrace(this, this.constructor);
 
-        if (!config.STACK_TACE_API_EXCEPTION) {
+        if (!config.get('STACK_TRACE_API_EXCEPTION')) {
             this.stack = null;
         }
     }

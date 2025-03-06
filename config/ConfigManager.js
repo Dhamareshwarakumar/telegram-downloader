@@ -1,42 +1,54 @@
 import 'dotenv/config';
 import ApiException from '../utils/ApiException.js';
-import { ENV_VARS } from '../utils/constants.js';
+import { ENV_VARS } from '../utils/constants/envVars.js';
+import { EMAIL_REGEX, PHONE_REGEX } from '../utils/constants/regex.js';
 
 class ConfigManager {
-    static instance = null;
     #config = {};
 
     constructor() {
-        if (!ConfigManager.instance) {
-            ConfigManager.instance = this;
-        }
-        return ConfigManager.instance;
+        Object.keys(ENV_VARS).forEach((key) => {
+            this.#config[key] = process.env[key];
+        });
     }
 
-    init() {
-        this.validateEnvVars();
-    }
-
-    validateEnvVars() {
-        let missingEnvVars = [];
+    validate() {
+        let invalidEnvVars = {};
 
         Object.keys(ENV_VARS).forEach((envVar) => {
-            // TODO: Check the scope of improvement
-            if (ENV_VARS[envVar].required && !process.env[envVar]) {
-                missingEnvVars.push(envVar);
-            } else if (ENV_VARS[envVar].default !== undefined && !process.env[envVar]) {
+            if (ENV_VARS[envVar].required && !this.#config[envVar]) {
+                invalidEnvVars[envVar] = 'Missing value';
+            } else if (ENV_VARS[envVar].default !== undefined && !this.#config[envVar]) {
                 this.#config[envVar] = ENV_VARS[envVar].default;
             } else if (ENV_VARS[envVar].type === 'number') {
-                this.#config[envVar] = parseInt(process.env[envVar]);
+                if (isNaN(this.#config[envVar])) {
+                    invalidEnvVars[envVar] = 'Invalid value, expected number';
+                }
+                this.#config[envVar] = Number(this.#config[envVar]);
             } else if (ENV_VARS[envVar].type === 'boolean') {
-                this.#config[envVar] = process.env[envVar] === 'true';
-            } else {
-                this.#config[envVar] = process.env[envVar];
+                if (this.#config[envVar] !== 'true' && this.#config[envVar] !== 'false') {
+                    invalidEnvVars[envVar] = 'Invalid value, expected boolean (true/false)';
+                }
+                this.#config[envVar] = this.#config[envVar] === 'true';
+            } else if (ENV_VARS[envVar].type === 'array') {
+                if (!Array.isArray(this.#config[envVar]) && typeof this.#config[envVar] !== 'string') {
+                    invalidEnvVars[envVar] = 'Invalid value, expected array/comma separated string';
+                } else if (typeof this.#config[envVar] === 'string') {
+                    this.#config[envVar] = this.#config[envVar].split(',').map((item) => item.trim());
+                }
+            } else if (ENV_VARS[envVar].type === 'email') {
+                if (!EMAIL_REGEX.test(this.#config[envVar])) {
+                    invalidEnvVars[envVar] = 'Invalid value, expected email';
+                }
+            } else if (ENV_VARS[envVar].type === 'phone') {
+                if (!PHONE_REGEX.test(this.#config[envVar])) {
+                    invalidEnvVars[envVar] = 'Invalid value, expected phone number';
+                }
             }
         });
 
-        if (missingEnvVars.length > 0) {
-            throw new ApiException(`Missing environment variables: ${missingEnvVars.join(', ')}`);
+        if (Object.keys(invalidEnvVars).length > 0) {
+            throw new ApiException(`Error parsing environment variables: ${JSON.stringify(invalidEnvVars, null, 2)}`);
         }
     }
 

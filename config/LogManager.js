@@ -1,13 +1,10 @@
+import config from './ConfigManager.js';
+
 class LogManager {
-    static instance = null;
     #logLevels;
     #logLevel;
 
     constructor() {
-        if (LogManager.instance) {
-            return LogManager.instance;
-        }
-
         this.#logLevels = {
             DEBUG: 0,
             INFO: 1,
@@ -15,31 +12,7 @@ class LogManager {
             ERROR: 3,
         };
 
-        this.#logLevel = this.#logLevels.INFO;
-
-        LogManager.instance = this;
-    }
-
-    set logLevel(level) {
-        if (this.#logLevels[level]) {
-            this.#logLevel = this.#logLevels[level];
-        }
-    }
-
-    formatMessage(level, ...messages) {
-        const message = messages
-            .map((msg) => {
-                if (msg instanceof Error) {
-                    return msg.stack || `${msg.name}: ${msg.message}`;
-                } else if (typeof msg === 'object') {
-                    return JSON.stringify(msg);
-                }
-                return msg;
-            })
-            .join(' ');
-
-        const timestamp = new Date().toISOString();
-        return `[${timestamp}] [${level}]: ${message}`;
+        this.#logLevel = this.#logLevels[config.get('LOG_LEVEL') || 'DEBUG'];
     }
 
     log(level, ...messages) {
@@ -63,6 +36,24 @@ class LogManager {
 
     error(...message) {
         this.log('ERROR', ...message);
+    }
+
+    formatMessage(level, ...messages) {
+        const timestamp = new Date().toISOString();
+
+        const message = messages
+            .map((msg) => {
+                if (msg instanceof Error) {
+                    return msg.stack || `${msg.name}: ${msg.message}`;
+                } else if (typeof msg === 'object') {
+                    return JSON.stringify(msg, null, 2);
+                }
+
+                return msg;
+            })
+            .join(' ');
+
+        return `[${process.pid}] [${timestamp}] [${level}]: ${message}`;
     }
 }
 

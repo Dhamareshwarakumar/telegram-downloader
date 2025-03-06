@@ -3,7 +3,7 @@ import { StringSession } from 'telegram/sessions/index.js';
 
 class TelegramManager {
     static instance = null;
-    client = null;
+    #client = null;
 
     constructor() {
         if (!TelegramManager.instance) {
@@ -13,16 +13,20 @@ class TelegramManager {
         return TelegramManager.instance;
     }
 
-    init() {
+    connect() {
         try {
             const apiId = Number(process.env.API_ID);
             const apiHash = process.env.API_HASH;
             const stringSession = new StringSession(process.env.STRING_SESSION);
 
-            this.client = new TelegramClient(stringSession, apiId, apiHash, {
+            this.#client = new TelegramClient(stringSession, apiId, apiHash, {
                 connectionRetries: 5,
             });
         } catch (error) {}
+    }
+
+    get client() {
+        return this.#client;
     }
 }
 
